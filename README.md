@@ -1,2 +1,2 @@
-# MLP_from_scratch
-Trying to create a Multi Level Perceptron (fully connected neural network) from scratch
+# Simple neural network fromscratch
+Creating a Multi Level Perceptron (fully connected neural network) from scratch, using PyTorch matrix functions
