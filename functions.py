@@ -4,4 +4,130 @@
 __all__ = []
 
 # %% functions.ipynb 1
-#|export
+import torch 
+
+# %% functions.ipynb 3
+class Layer: #layer class to save the succession of layers i want
+    def __init__(self, n_perceptrons, activation="relu"):
+        self.n_perceptrons=n_perceptrons
+        self.activation= activation
+
+class _Layer: #version that gets defined according to the previous layer output size, should not be used by the user
+    def __init__(self, size, activation="relu"):
+        self.size=size
+        self.weights=2*torch.rand(self.size)-1 #initialize as a matrix random matrix between -1 and 1
+        self.activation= activation
+
+
+class MLP_Model:
+    """
+    A class for managing inference on individual vectors.
+    This class is designed to perform inference on a single vector at a time to simplify understanding and debugging. 
+    Although in real-world applications inference is usually performed on batches of vectors for efficiency, 
+    extending this implementation to handle batches is straightforward. Since derivatives are linear operators, 
+    backpropagation for a batch of vectors is conceptually similar to that for a single vector.
+    """
+    def __init__(self, layers, input_size ): 
+
+        self.input_size=input_size
+
+        #start creating the layers with the correct matrix size
+        nrows= input_size
+        ncolumns=layers[0].n_perceptrons
+        self.sequence=[_Layer(size=(nrows ,ncolumns), activation= layers[0].activation )]
+        for layer in layers[1:]:
+            nrows= ncolumns
+            ncolumns = layer.n_perceptrons
+            self.sequence.append(_Layer(size=(nrows ,ncolumns), activation= layer.activation ))
+
+    
+    def predict_with_softmax(self, vector):
+        
+        if len(vector) != len(self.input_size): #input size is not flexible, must correspond to the model one
+            raise ValueError("Length of vector does not match the expected input shape.")
+        
+        for layer in self.sequence:
+            vector = layer.weights.mv(vector) #matrix vector multiplication of input layers 
+            if layer.activation == "relu":
+                vector=vector.clamp(min=0) #relu activation function
+            if layer.activation == "sigmoid":
+                vector=vector.sigmoid()
+            #if layer.activation == "none":
+        return torch.softmax(vector)
+    
+    def _predict(self, vector):
+        
+        if len(vector) != len(self.input_size): #input size is not flexible, must correspond to the model one
+            raise ValueError("Length of vector does not match the expected input shape.")
+        vectors=[vector]
+        for i,layer in enumerate(self.sequence):
+            vector = layer.weights.mv(vector) #matrix vector multiplication of input layers 
+
+            if layer.activation == "relu":
+                vector=vector.clamp(min=0) #relu activation function
+            if layer.activation == "sigmoid":
+                vector=vector.sigmoid()
+            #if layer.activation == "none":
+            vectors.append(vector)
+        return vectors
+    
+    def train(self, train_x, train_y, val_x, val_y, max_epochs=3, seed=42):
+        #add initial train and validation loss and accuracy
+        n_train=len(train_x)
+        n_val=len(train_x)
+
+        for epoch in range(max_epochs):
+            train_loss=0
+            val_loss =0
+            for x,y in zip(train_x,train_y): #batch size 1, since it's a simplified, trivial to modify to more
+                vectors = self._predict(x)
+                loss= _crossentropy_loss(vectors[-1],y)
+                #if correct, n_corect += 1
+                train_loss+=loss/n_train
+                self.backpropagate(vectors,y)
+            
+            for x,y in  zip(val_x,val_y):#test validation loss and accuracy
+                vectors = self._predict(x)
+                loss = _crossentropy_loss(vectors[-1],y)
+                #if correct, n_corect += 1
+                val_loss += loss/n_val
+            print(f"epoch {i} has train_loss {train_loss}...")
+    
+    def _backpropagate_error(self, vectors, y, step_size=0.01):
+
+        dLdzi=vectors[-1].exp()/vectors[-1].exp().sum() #notice that dLdzi contains the predicted softmax probabilities
+        dLdzi[y]-=1 #loss derivative for increasing the correct prediciton is negative, simply subtracting -1 
+
+        #now let's see the matrix of weight Wk, the gradient is trivially calculated as
+        dLdw=torch.outer(dLdzi,vectors[-i-1] ) #it's an outer product, because with the chain rule, the previous vector value is involved and the resulting vector gradient is involved
+        self.sequence[i].weights -= dLdw*step_size
+
+        for i in range(-2,-len(vectors)+1):
+            dldzi= torch.tensor()
+            torch.outer()
+            self.sequence[i].weights - torch.outer(dLdzi,vectors[-i-1] ) #each column ith element must be subtracted of the value of the previous vector ith value
+
+
+
+
+
+
+        for i, v in enumerate(vectors):
+            #w_i_size=self.sequence[-i-1].weights.shape()
+
+            
+
+            for z in v: #compute derivative of the single output vector, for simplicity here only relu except last iteration
+                if self.sequence[-i-1].activation == "relu":
+
+                else: #last layer, derivatives can be computed using zi
+
+
+
+
+
+
+
+
+
+
